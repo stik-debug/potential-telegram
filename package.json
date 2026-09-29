@@ -1,11 +1,8 @@
 {
   "name": "chamahub-kenya",
-  "version": "3.0.0",
-  "description": "ChamaHub Kenya — Production multi-tenant SaaS",
+  "version": "4.0.0",
+  "description": "ChamaHub Kenya — ledger-style chama app",
   "main": "server/index.js",
-  "scripts": {
-    "start": "node server/index.js",
-    "seed": "node -e \"require('./server/db').seed(); console.log('Seeded (dev)')\""
-  },
+  "scripts": { "start": "node server/index.js" },
   "engines": { "node": ">=16" }
 }

@@ -2,169 +2,115 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>ChamaHub Owner Control Center</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/owner/owner.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ChamaHub Owner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#0f1a16; --surface:#1a2a24; --text:#f0f4f2; --muted:#8a9a94; --gold:#c9a227; --emerald:#1a7a5c; --border:rgba(255,255,255,.08); }
+    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Inter,system-ui;background:var(--bg);color:var(--text);min-height:100vh}
+    .hidden{display:none!important}
+    .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:var(--surface);padding:28px;border-radius:16px;width:100%;max-width:360px;border:1px solid var(--border)}
+    .card h1{font-size:20px;margin-bottom:4px}.card p{color:var(--muted);font-size:13px;margin-bottom:16px}
+    input{width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+    button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--gold);color:#111;font-weight:700;cursor:pointer}
+    .app{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+    aside{background:var(--surface);padding:16px;border-right:1px solid var(--border)}
+    aside button{background:transparent;color:var(--muted);text-align:left;margin-bottom:4px;border:1px solid transparent}
+    aside button.active{background:#243530;color:var(--text)}
+    main{padding:20px}
+    .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px}
+    .stat .l{font-size:11px;color:var(--muted)}.stat .v{font-size:20px;font-weight:800;color:var(--gold);margin-top:4px}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+    th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:.3s}
+    .toast.show{opacity:1}
+  </style>
 </head>
 <body>
-  <div id="login-gate" class="login-gate">
-    <div class="login-card">
-      <div class="logo">CH</div>
+  <div id="login" class="login">
+    <form class="card" id="f">
       <h1>Owner Control Center</h1>
-      <p>SUPER_ADMIN only</p>
-      <form id="owner-login">
-        <input type="tel" id="phone" placeholder="Phone" value="0700000001" />
-        <input type="password" id="pin" placeholder="PIN" />
-        <button type="submit">Sign in</button>
-      </form>
-      <p class="hint">Default: 0700000001 / Owner@2026!</p>
-    </div>
+      <p>SUPER_ADMIN only · 0700000001 / Owner@2026!</p>
+      <input id="phone" value="0700000001" /><input id="pin" type="password" placeholder="PIN" />
+      <button type="submit">Sign in</button>
+    </form>
   </div>
-
   <div id="app" class="app hidden">
-    <aside class="sidebar">
-      <div class="side-brand">ChamaHub <span>Owner</span></div>
-      <nav>
-        <button class="nav active" data-view="dashboard">Dashboard</button>
-        <button class="nav" data-view="chamas">Chamas</button>
-        <button class="nav" data-view="users">Users</button>
-        <button class="nav" data-view="plans">Plans</button>
-        <button class="nav" data-view="payments">Payments</button>
-        <button class="nav" data-view="audit">Audit Logs</button>
-        <button class="nav" data-view="settings">Settings</button>
-      </nav>
-      <button class="logout" id="btn-logout">Logout</button>
+    <aside>
+      <strong style="display:block;margin-bottom:16px">ChamaHub Owner</strong>
+      <button class="active" data-v="dash">Dashboard</button>
+      <button data-v="chamas">Chamas</button>
+      <button data-v="plans">Plans</button>
+      <button data-v="users">Users</button>
+      <button id="out">Logout</button>
     </aside>
-    <main class="main">
-      <header class="topbar">
-        <h2 id="view-title">Dashboard</h2>
-        <div class="top-actions">
-          <button id="btn-run-expiry" class="btn-ghost">Run expiry job</button>
-          <span id="owner-name"></span>
-        </div>
-      </header>
-
-      <!-- DASHBOARD -->
-      <section id="view-dashboard" class="view active">
-        <div class="stat-grid" id="stat-grid"></div>
-        <div class="card">
-          <h3>Platform health</h3>
-          <p class="muted">All figures are live from the database — not marketing numbers.</p>
-        </div>
-      </section>
-
-      <!-- CHAMAS -->
-      <section id="view-chamas" class="view">
-        <div class="toolbar">
-          <input type="search" id="chama-search" placeholder="Search name, ID, phone…" />
-          <select id="chama-filter">
-            <option value="">All statuses</option>
-            <option value="ACTIVE">Paid / Active</option>
-            <option value="TRIAL">Trial</option>
-            <option value="PAST_DUE">Past due</option>
-            <option value="GRACE_PERIOD">Grace period</option>
-            <option value="SUSPENDED">Suspended</option>
-            <option value="EXPIRED">Expired</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th><th>Chama</th><th>Admin</th><th>Phone</th><th>Members</th>
-                <th>Plan</th><th>Sub status</th><th>Next payment</th><th>Paid</th><th>Status</th><th></th>
-              </tr>
-            </thead>
-            <tbody id="chama-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- CHAMA DETAIL DRAWER -->
-      <div id="chama-drawer" class="drawer hidden">
-        <div class="drawer-backdrop" id="drawer-close"></div>
-        <div class="drawer-panel">
-          <button class="drawer-x" id="drawer-x">×</button>
-          <div id="chama-detail"></div>
-        </div>
-      </div>
-
-      <!-- USERS -->
-      <section id="view-users" class="view">
-        <div class="toolbar">
-          <input type="search" id="user-search" placeholder="Search users…" />
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Chama</th><th>Status</th><th>Last login</th></tr></thead>
-            <tbody id="user-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      
-      <!-- PLANS -->
-      <section id="view-plans" class="view">
-        <div class="toolbar">
-          <button class="btn-primary" id="btn-new-plan">+ New plan</button>
-        </div>
-        <div class="plans-grid" id="plans-grid"></div>
-      </section>
-
-      <!-- PAYMENTS -->
-      <section id="view-payments" class="view">
-        <div class="toolbar">
-          <input type="search" id="pay-search" placeholder="Search payments…" />
-          <select id="pay-filter">
-            <option value="">All</option>
-            <option value="SUCCESS">Successful</option>
-            <option value="PENDING">Pending</option>
-            <option value="FAILED">Failed</option>
-          </select>
-          <button class="btn-primary" id="btn-manual-pay">Record manual payment</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>ID</th><th>Chama</th><th>Payer</th><th>Amount</th><th>Method</th><th>Ref</th><th>Status</th><th>Date</th></tr></thead>
-            <tbody id="pay-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- AUDIT -->
-      <section id="view-audit" class="view">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th><th>Meta</th></tr></thead>
-            <tbody id="audit-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- SETTINGS -->
-      <section id="view-settings" class="view">
-        <div class="card form-card">
-          <h3>System settings</h3>
-          <label>Platform name <input id="set-name" /></label>
-          <label>Support email <input id="set-email" /></label>
-          <label>Support phone <input id="set-phone" /></label>
-          <label>Trial days <input id="set-trial" type="number" /></label>
-          <label>Grace days <input id="set-grace" type="number" /></label>
-          <label class="check"><input type="checkbox" id="set-maint" /> Maintenance mode</label>
-          <button class="btn-primary" id="btn-save-settings">Save settings</button>
-        </div>
-        <div class="card danger-zone">
-          <h3>Danger zone</h3>
-          <p>Maintenance mode blocks all non-owner access. Data is never deleted on suspension.</p>
-          <button class="btn-danger" id="btn-toggle-maint">Toggle maintenance</button>
-        </div>
-      </section>
+    <main>
+      <h2 id="title">Dashboard</h2>
+      <div id="dash" class="stats"></div>
+      <div id="chamas" class="hidden"></div>
+      <div id="plans" class="hidden"></div>
+      <div id="users" class="hidden"></div>
     </main>
   </div>
-
   <div id="toast" class="toast"></div>
-  <script src="/owner/owner.js"></script>
+  <script>
+    let token = localStorage.getItem('ch_owner_token');
+    const toast = m => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); };
+    async function api(p,o={}) {
+      const h={'Content-Type':'application/json'}; if(token) h.Authorization='Bearer '+token;
+      const r=await fetch(p,{...o,headers:h}); const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||r.statusText); return d;
+    }
+    document.getElementById('f').onsubmit=async e=>{
+      e.preventDefault();
+      try{
+        const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone:phone.value,pin:pin.value})});
+        if(d.user.platform_role!=='SUPER_ADMIN') throw new Error('SUPER_ADMIN required');
+        token=d.token; localStorage.setItem('ch_owner_token',token);
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        loadDash();
+      }catch(err){toast(err.message)}
+    };
+    document.getElementById('out').onclick=()=>{token=null;localStorage.removeItem('ch_owner_token');location.reload()};
+    document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{
+      document.querySelectorAll('[data-v]').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+      ['dash','chamas','plans','users'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+      document.getElementById(b.dataset.v).classList.remove('hidden');
+      title.textContent=b.textContent;
+      if(b.dataset.v==='dash') loadDash();
+      if(b.dataset.v==='chamas') loadChamas();
+      if(b.dataset.v==='plans') loadPlans();
+      if(b.dataset.v==='users') loadUsers();
+    });
+    async function loadDash(){
+      const s=await api('/api/owner/stats');
+      dash.innerHTML=[['Users',s.total_users],['Chamas',s.total_chamas],['Active',s.active_chamas],['Suspended',s.suspended_chamas],['MRR','KES '+s.mrr],['Members',s.total_members]]
+        .map(([l,v])=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+    }
+    async function loadChamas(){
+      const d=await api('/api/owner/chamas');
+      chamas.innerHTML='<table><tr><th>ID</th><th>Name</th><th>Admin</th><th>Sub</th><th>Status</th><th></th></tr>'+
+        d.chamas.map(c=>`<tr><td>${c.id}</td><td>${c.name}</td><td>${c.admin_name||'—'}</td><td>${c.subscription_status||'—'}</td><td>${c.status}</td>
+        <td>${c.status==='SUSPENDED'
+          ?`<button style="width:auto;padding:6px 10px" onclick="reactivate(${c.id})">Reactivate</button>`
+          :`<button style="width:auto;padding:6px 10px" onclick="suspend(${c.id})">Suspend</button>`}</td></tr>`).join('')+'</table>';
+    }
+    async function suspend(id){ const reason=prompt('Reason','Subscription payment overdue'); if(reason===null)return;
+      await api('/api/owner/chamas/'+id+'/suspend',{method:'POST',body:JSON.stringify({reason})}); toast('Suspended'); loadChamas(); }
+    async function reactivate(id){ await api('/api/owner/chamas/'+id+'/reactivate',{method:'POST',body:JSON.stringify({extend_days:30})}); toast('Reactivated'); loadChamas(); }
+    async function loadPlans(){
+      const d=await api('/api/owner/plans');
+      plans.innerHTML=d.plans.map(p=>`<div class="stat" style="margin-bottom:8px"><div class="v">${p.name}</div><div class="l">KES ${p.price}/mo · ${p.max_members} members · ${p.active?'Active':'Off'}</div></div>`).join('');
+    }
+    async function loadUsers(){
+      const d=await api('/api/owner/users');
+      users.innerHTML='<table><tr><th>Name</th><th>Phone</th><th>Role</th><th>Chama</th></tr>'+
+        d.users.map(u=>`<tr><td>${u.name}</td><td>${u.phone}</td><td>${u.platform_role}</td><td>${u.chama_name||'—'}</td></tr>`).join('')+'</table>';
+    }
+    if(token){ api('/api/me').then(d=>{ if(d.user.platform_role==='SUPER_ADMIN'){ login.classList.add('hidden'); app.classList.remove('hidden'); loadDash(); } else localStorage.removeItem('ch_owner_token'); }).catch(()=>{}); }
+  </script>
 </body>
 </html>

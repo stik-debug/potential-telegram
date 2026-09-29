@@ -1,4 +1,3 @@
-/* ChamaHub Kenya v2 — API client with Add Member + clear payments */
 (function () {
   'use strict';
 
@@ -6,51 +5,27 @@
     token: localStorage.getItem('ch_token') || null,
     user: null,
     chama: null,
-    dashboard: null,
     canManage: false,
-    onboardStep: 0,
-    currentPage: 'home',
-    theme: localStorage.getItem('ch-theme') || 'light',
-    perfMode: localStorage.getItem('ch-perf') === '1',
-    reducedMotion: localStorage.getItem('ch-motion') === '1',
+    canConfirm: false,
     contribAmount: 2000,
     selectedMethodId: null,
     paymentMethods: [],
-    canConfirmContrib: false,
+    theme: localStorage.getItem('ch-theme') || 'light',
   };
 
-  const $ = (s, c = document) => c.querySelector(s);
-  const $$ = (s, c = document) => [...c.querySelectorAll(s)];
+  const $ = (s, c) => (c || document).querySelector(s);
+  const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
 
-  async function api(path, opts = {}) {
-    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-    if (state.token) headers.Authorization = 'Bearer ' + state.token;
-    const res = await fetch(path, { ...opts, headers });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || res.statusText || 'Request failed');
-    return data;
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
   }
-
   function formatKES(n) {
     return 'KES ' + Number(n || 0).toLocaleString('en-KE');
   }
-  function formatDate(str) {
-    if (!str) return '';
-    const d = new Date(str);
-    if (isNaN(d)) return str;
-    const now = new Date();
-    if (d.toDateString() === now.toDateString()) return 'Today';
-    const y = new Date(now); y.setDate(y.getDate() - 1);
-    if (d.toDateString() === y.toDateString()) return 'Yesterday';
-    return d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short' });
-  }
   function initials(n) {
-    return (n || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  }
-  function esc(s) {
-    const d = document.createElement('div');
-    d.textContent = s || '';
-    return d.innerHTML;
+    return (n || '?').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   }
   function toast(msg) {
     const t = $('#toast');
@@ -60,6 +35,16 @@
     setTimeout(() => t.classList.remove('show'), 3200);
   }
 
+  async function api(path, opts) {
+    opts = opts || {};
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+    if (state.token) headers.Authorization = 'Bearer ' + state.token;
+    const res = await fetch(path, Object.assign({}, opts, { headers }));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.message || res.statusText);
+    return data;
+  }
+
   function showView(id) {
     $$('.view').forEach(v => v.classList.remove('active'));
     const el = $('#view-' + id);
@@ -67,432 +52,113 @@
   }
 
   function showPage(page) {
-    state.currentPage = page;
     $$('.page').forEach(p => p.classList.remove('active'));
     const el = $('#page-' + page);
     if (el) el.classList.add('active');
-    $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+
+    $$('.nav-item').forEach(n => {
+      n.classList.toggle('active', n.getAttribute('data-go') === page);
+    });
+
     const titles = {
-      home: 'Home', chama: 'Chama', money: 'Money', messages: 'Messages',
-      profile: 'Profile', owner: 'Control Center', subscription: 'Subscription',
-      meetings: 'Meetings', contribute: 'Contribute', payment: '', success: '', expired: 'Subscription',
+      home: 'Home', contribute: 'Contribute', money: 'Money',
+      chama: 'Chama', messages: 'Messages', profile: 'Profile',
+      success: 'Done', suspended: 'Suspended',
     };
     const ht = $('#header-title');
     if (ht) ht.textContent = titles[page] || 'ChamaHub';
+
     const app = $('#view-app');
-    if (app) app.classList.toggle('hide-nav', ['contribute', 'payment', 'success', 'expired'].includes(page));
+    if (app) app.classList.toggle('hide-nav', page === 'success' || page === 'suspended');
+
     if (page === 'home') loadDashboard();
-    if (page === 'chama') loadMembers();
+    if (page === 'contribute') loadPaymentMethods();
     if (page === 'money') loadMoney();
+    if (page === 'chama') loadChama();
     if (page === 'messages') loadMessages();
     if (page === 'profile') renderProfile();
-    if (page === 'owner') loadOwner();
-    if (page === 'subscription') loadSubscription();
-    if (page === 'meetings') loadMeetings();
-    if (page === 'contribute') { loadPaymentMethods(); renderContributeSummary(); }
-  }
-
-  function openModal(id) {
-    const m = $('#' + id);
-    if (m) m.classList.remove('hidden');
-  }
-  function closeModals() {
-    $$('.modal').forEach(m => m.classList.add('hidden'));
   }
 
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', state.theme === 'dark' ? 'dark' : 'light');
     localStorage.setItem('ch-theme', state.theme);
   }
-  function applyPerf() {
-    document.body.classList.toggle('perf-mode', state.perfMode);
-    localStorage.setItem('ch-perf', state.perfMode ? '1' : '0');
-    const t = $('#perf-toggle');
-    if (t) t.classList.toggle('on', state.perfMode);
-  }
-  function applyMotion() {
-    document.body.classList.toggle('reduced-motion', state.reducedMotion);
-    localStorage.setItem('ch-motion', state.reducedMotion ? '1' : '0');
-    const t = $('#motion-toggle');
-    if (t) t.classList.toggle('on', state.reducedMotion);
-  }
 
-  // ---------- LOADERS ----------
+  // ---------- DATA ----------
   async function loadDashboard() {
     try {
       const data = await api('/api/dashboard');
-      state.dashboard = data;
-      state.chama = data.chama;
       state.canManage = !!data.can_manage;
-      state.canConfirmContrib = ['CHAMA_ADMIN', 'TREASURER', 'chair', 'treasurer'].includes((data.member_role || '').toUpperCase().replace('CHAIR', 'CHAMA_ADMIN')) || data.can_manage;
-      if (data.chama.subscription_status === 'EXPIRED') {
-        showPage('expired');
-        return;
-      }
-      const cn = $('.chama-name');
+      state.canConfirm = !!data.can_confirm;
+      state.chama = {
+        chama_id: data.chama.id,
+        chama_name: data.chama.name,
+        member_role: data.member_role,
+        invite_code: data.chama.invite_code,
+        contribution_amount: data.chama.contribution_amount,
+      };
+
+      const cn = $('#chama-name');
       if (cn) cn.textContent = data.chama.name;
       const bal = $('#balance-amount');
       if (bal) bal.textContent = formatKES(data.total_savings);
-      const stats = $$('.balance-stats .b-value');
-      if (stats[0]) stats[0].textContent = formatKES(data.month_contributions);
-      if (stats[1]) stats[1].textContent = formatKES(data.outstanding_loans);
-      if (stats[2]) stats[2].textContent = 'Fri ' + (data.chama.contribution_amount || 2000).toLocaleString();
-      const metrics = $$('.metric-value');
-      if (metrics[0]) metrics[0].textContent = formatKES(data.total_savings);
-      if (metrics[1]) metrics[1].textContent = formatKES(data.month_contributions);
-      if (metrics[2]) metrics[2].textContent = formatKES(data.outstanding_loans);
-      if (metrics[3]) metrics[3].textContent = data.member_count + ' / ' + data.chama.max_members;
-    } catch (e) {
-      toast(e.message);
-      if (/log in|Unauthorized|token/i.test(e.message)) logout();
-    }
-  }
+      const sm = $('#stat-month');
+      if (sm) sm.textContent = formatKES(data.month_contributions);
+      const sl = $('#stat-loans');
+      if (sl) sl.textContent = formatKES(data.outstanding_loans);
+      const smem = $('#stat-members');
+      if (smem) smem.textContent = data.member_count + '/' + data.chama.max_members;
 
-  async function loadMembers() {
-    try {
-      const data = await api('/api/members');
-      state.canManage = !!data.can_manage;
-      state.canConfirmContrib = ['CHAMA_ADMIN', 'TREASURER', 'chair', 'treasurer'].includes((data.member_role || '').toUpperCase().replace('CHAIR', 'CHAMA_ADMIN')) || data.can_manage;
-      const list = $('#member-list');
-      if (!list) return;
-      list.innerHTML = data.members.map(m => {
-        const removeBtn = state.canManage && m.role !== 'chair' && m.id !== state.user.id
-          ? `<button class="btn-icon-sm danger" data-remove-member="${m.id}">Remove</button>`
-          : '';
-        return `<div class="member-card">
-          <div class="member-avatar" style="background:${m.avatar_color || '#0D5C45'}">${initials(m.name)}</div>
-          <div class="member-info">
-            <h4>${esc(m.name)}</h4>
-            <p>${esc(m.phone)} · ${formatKES(m.total_contributed)} contributed</p>
-            <p>${m.outstanding_loan > 0 ? 'Loan ' + formatKES(m.outstanding_loan) : 'No active loan'}</p>
-          </div>
-          <div class="member-actions">
-            <span class="member-role">${esc(m.role)}</span>
-            ${removeBtn}
-          </div>
-        </div>`;
-      }).join('');
-
-      const count = $('.section-title .count');
-      if (count) count.textContent = data.member_count + ' / ' + data.max_members;
-
-      const manage = $('#manage-actions');
-      const noManage = $('#no-manage');
-      if (manage) manage.style.display = 'block'; // always show (methods visible to all; invite gated below)
-      if (noManage) noManage.style.display = data.can_manage ? 'none' : 'block';
-
-      const codeEl = $('#invite-code-display');
-      if (codeEl) codeEl.textContent = data.invite_code || '—';
-      const olist = document.getElementById('official-methods-list');
-      const payManage = document.getElementById('pay-methods-manage');
-      const addBtn = document.getElementById('btn-add-pay-method');
-      if (payManage) payManage.style.display = 'block';
-      if (addBtn) addBtn.style.display = data.can_manage ? 'block' : 'none';
-      if (olist) {
-        api('/api/payment-methods').then(d => {
-          const methods = d.methods || [];
-          if (!methods.length) {
-            olist.innerHTML = '<p class="muted">' + (data.can_manage
-              ? 'No methods yet — tap + Add payment method'
-              : 'No payment methods published yet') + '</p>';
-            return;
-          }
-          olist.innerHTML = methods.map(m =>
-            '<div class="member-card" style="padding:10px"><div class="member-info"><h4>' + esc(m.label) +
-            '</h4><p>' + esc(m.details) + '</p>' +
-            (m.instructions ? '<p class="muted" style="font-size:11px">' + esc(m.instructions) + '</p>' : '') +
-            '</div>' +
-            (data.can_manage ? '<button type="button" class="btn-icon-sm danger" data-del-method="' + m.id + '">Remove</button>' : '') +
-            '</div>'
-          ).join('');
-        }).catch(err => {
-          if (olist) olist.innerHTML = '<p class="muted">Could not load methods</p>';
-        });
-      }
-      // Invite only for managers; payment methods stay visible for everyone
-      const inviteBtn = document.getElementById('btn-invite');
-      if (inviteBtn) inviteBtn.style.display = data.can_manage ? 'block' : 'none';
-      const hint = $('#invite-hint');
-      if (hint) hint.textContent = 'Invite code: ' + (data.invite_code || '—');
-    } catch (e) {
-      toast(e.message);
-    }
-  }
-
-  async function loadMoney() {
-    try {
-      // officials can confirm pending ledger entries
-      if (state.chama && state.chama.member_role) {
-        const r = String(state.chama.member_role).toUpperCase();
-        state.canConfirmContrib = r.includes('ADMIN') || r.includes('TREASURER') || r === 'CHAIR';
-      }
-      const [contrib, loans] = await Promise.all([
-        api('/api/contributions'),
-        api('/api/loans'),
-      ]);
-
-      // Summary cards
-      let summary = $('#contrib-summary');
-      if (!summary) {
-        const panel = $('#tab-contrib');
-        if (panel) {
-          summary = document.createElement('div');
-          summary.id = 'contrib-summary';
-          summary.className = 'contrib-summary-bar';
-          const hero = panel.querySelector('.contrib-hero');
-          if (hero) hero.after(summary);
-          else panel.prepend(summary);
+      const recent = $('#home-recent');
+      if (recent) {
+        if (!data.recent_contributions.length) {
+          recent.innerHTML = '<p class="muted">No contributions yet. Tap Record contribution above.</p>';
+        } else {
+          recent.innerHTML = data.recent_contributions.map(txRow).join('');
         }
       }
-      if (summary) {
-        summary.innerHTML = `
-          <div class="cs-card"><span class="cs-val">${formatKES(contrib.total)}</span><span class="cs-lbl">All time</span></div>
-          <div class="cs-card"><span class="cs-val">${formatKES(contrib.mine)}</span><span class="cs-lbl">My total</span></div>
-          <div class="cs-card"><span class="cs-val">${contrib.count}</span><span class="cs-lbl">Payments</span></div>
-        `;
-      }
-
-      if (state.dashboard) {
-        const h2 = $('.contrib-hero h2');
-        if (h2) h2.textContent = formatKES(state.dashboard.month_contributions);
-      }
-
-      const html = contrib.contributions.map(c => {
-        const statusClass = c.status === 'SUCCESS' || c.status === 'completed' ? 'completed' : 'pending';
-        const statusLabel = c.status === 'SUCCESS' || c.status === 'completed' ? 'Paid' : 'Pending';
-        const sign = c.status === 'SUCCESS' || c.status === 'completed' ? '+' : '';
-        return `<div class="tx-item">
-          <div class="tx-icon">${c.status === 'SUCCESS' || c.status === 'completed' ? '↑' : '…'}</div>
-          <div class="tx-info">
-            <h4>${esc(c.name)}${c.is_mine ? ' (You)' : ''}</h4>
-            <p>${formatDate(c.created_at)}</p>
-          </div>
-          <span class="tx-amount" style="${c.status !== 'SUCCESS' && c.status !== 'completed' ? 'color:var(--text-muted)' : ''}">${sign}${formatKES(c.amount)}</span>
-          <div class="tx-meta-row">
-            <span class="tx-ref">${c.mpesa_ref ? 'M-Pesa: ' + c.mpesa_ref : 'Awaiting confirmation'}</span>
-            <span class="tx-status ${statusClass}${c.status === 'REJECTED' ? ' rejected' : ''}">${statusLabel}</span>
-          </div>
-          ${(c.status === 'PENDING' || c.status === 'pending') && state.canConfirmContrib ? '<div class="tx-actions"><button class="confirm-btn" data-confirm-contrib="'+c.id+'">Confirm</button><button class="reject-btn" data-reject-contrib="'+c.id+'">Reject</button></div>' : ''}
-        </div>`;
-      }).join('') || '<div class="empty-state small"><div class="empty-icon">💰</div><p>No contributions yet</p></div>';
-
-      const list = $('#contrib-list');
-      const hist = $('#history-list');
-      if (list) list.innerHTML = html;
-      if (hist) hist.innerHTML = html;
-
-      // Loan
-      const loan = loans.my_loan;
-      if (loan) {
-        const total = loan.principal + loan.interest;
-        const pct = total ? Math.round((loan.amount_repaid / total) * 100) : 0;
-        const rem = total - loan.amount_repaid;
-        const amtEl = $('.loan-amount');
-        if (amtEl) amtEl.textContent = formatKES(rem);
-        const ring = $('.ring-fill');
-        if (ring) {
-          const circ = 2 * Math.PI * 42;
-          ring.style.strokeDasharray = circ;
-          ring.style.strokeDashoffset = circ * (1 - pct / 100);
-        }
-        const pctEl = $('.ring-pct');
-        if (pctEl) pctEl.textContent = pct + '%';
-        const rows = $$('.ld-row span:last-child');
-        if (rows[0]) rows[0].textContent = formatKES(loan.principal);
-        if (rows[1]) rows[1].textContent = formatKES(loan.interest);
-        if (rows[2]) rows[2].textContent = formatKES(loan.amount_repaid);
-        if (rows[3]) rows[3].textContent = formatKES(rem);
-        if (rows[4]) rows[4].textContent = loan.next_payment || '—';
-      } else {
-        const amtEl = $('.loan-amount');
-        if (amtEl) amtEl.textContent = formatKES(0);
-        const pctEl = $('.ring-pct');
-        if (pctEl) pctEl.textContent = '0%';
-      }
     } catch (e) {
-      toast(e.message);
-    }
-  }
-
-  function renderContributeSummary() {
-    const amt = state.contribAmount || 2000;
-    let box = $('#payment-summary-box');
-    if (!box) {
-      const flow = $('.contrib-flow');
-      if (!flow) return;
-      box = document.createElement('div');
-      box.id = 'payment-summary-box';
-      box.className = 'payment-summary';
-      const btn = $('#btn-record-contrib');
-      if (btn) flow.insertBefore(box, btn);
-      else flow.appendChild(box);
-    }
-    const phone = state.user ? state.user.phone : '—';
-    box.innerHTML = `
-      <div class="ps-row"><span>Amount</span><span id="ps-amount">${formatKES(amt)}</span></div>
-      <div class="ps-row"><span>Pay to</span><span>Chama wallet</span></div>
-      <div class="ps-row"><span>Via</span><span>M-Pesa (${esc(phone)})</span></div>
-      <div class="ps-row total"><span>You pay</span><span id="ps-total">${formatKES(amt)}</span></div>
-    `;
-  }
-
-  async function loadMessages() {
-    try {
-      const data = await api('/api/messages');
-      const box = $('#chat-messages');
-      if (!box) return;
-      box.innerHTML = data.messages.map(m => {
-        const me = m.user_id === state.user.id;
-        return `<div class="msg ${me ? 'me' : 'them'}">${me ? '' : '<div class="msg-meta">' + esc(m.name) + '</div>'}${esc(m.body)}</div>`;
-      }).join('');
-      box.scrollTop = box.scrollHeight;
-    } catch (e) {
-      toast(e.message);
-    }
-  }
-
-  async function loadMeetings() {
-    try {
-      const data = await api('/api/meetings');
-      const upcoming = data.meetings.filter(m => new Date(m.meeting_at) >= new Date());
-      const card = $('.meeting-card.large');
-      if (card && upcoming[0]) {
-        const m = upcoming[0];
-        const d = new Date(m.meeting_at);
-        const calDay = card.querySelector('.cal-day');
-        const calMonth = card.querySelector('.cal-month');
-        if (calDay) calDay.textContent = String(d.getDate()).padStart(2, '0');
-        if (calMonth) calMonth.textContent = d.toLocaleDateString('en-KE', { month: 'short' }).toUpperCase();
-        const h4 = card.querySelector('h4');
-        if (h4) h4.textContent = m.title;
-        card.dataset.meetingId = m.id;
+      if (e.message && /SUSPENDED|EXPIRED|CANCELLED/i.test(e.message)) {
+        const m = $('#suspend-msg');
+        if (m) m.textContent = e.message;
+        showPage('suspended');
+        return;
       }
-    } catch (e) {
       toast(e.message);
+      if (/log in|Unauthorized/i.test(e.message)) logout();
     }
   }
 
-  async function loadSubscription() {
-    try {
-      const data = await api('/api/subscription');
-      const plan = $('.sub-plan');
-      if (plan) plan.textContent = data.plan;
-      const members = $('.sub-members');
-      if (members) members.textContent = data.max_members + ' MEMBERS';
-      const price = $('.sub-price');
-      if (price) price.textContent = formatKES(data.price) + ' / MONTH';
-      const status = $('.sub-status');
-      if (status) {
-        status.innerHTML = data.status === 'ACTIVE'
-          ? '<span class="dot active"></span> ACTIVE'
-          : '<span class="dot" style="background:#DC2626"></span> EXPIRED';
-      }
-      const next = $('.sub-next');
-      if (next) next.textContent = data.next_payment ? 'Next payment: ' + data.next_payment : '';
-    } catch (e) {
-      toast(e.message);
-    }
+  function txRow(c) {
+    const status = c.status === 'SUCCESS' ? 'ok' : c.status === 'REJECTED' ? 'rejected' : 'pending';
+    const label = c.status === 'SUCCESS' ? 'Confirmed' : c.status === 'REJECTED' ? 'Rejected' : 'Pending';
+    const actions = (c.status === 'PENDING' && state.canConfirm)
+      ? '<div class="tx-actions"><button type="button" class="ok" data-confirm="' + c.id + '">Confirm</button><button type="button" class="no" data-reject="' + c.id + '">Reject</button></div>'
+      : '';
+    return (
+      '<div class="tx-item">' +
+      '<div class="tx-icon">' + (c.status === 'SUCCESS' ? '↑' : '…') + '</div>' +
+      '<div><h4>' + esc(c.name || 'Member') + (c.is_mine ? ' (You)' : '') + '</h4>' +
+      '<p>' + esc(c.payment_method_label || c.method || '') +
+      (c.mpesa_ref ? ' · ' + esc(c.mpesa_ref) : '') + '</p>' +
+      '<span class="tx-badge ' + status + '">' + label + '</span></div>' +
+      '<div class="tx-amt">' + formatKES(c.amount) + '</div>' +
+      actions +
+      '</div>'
+    );
   }
 
-  async function loadOwner() {
-    try {
-      const data = await api('/api/owner/stats');
-      const vals = $$('.om-value');
-      if (vals[0]) vals[0].textContent = data.active_chamas.toLocaleString();
-      if (vals[1]) vals[1].textContent = data.active_users.toLocaleString();
-      if (vals[2]) vals[2].textContent = formatKES(data.monthly_revenue);
-      if (vals[3]) vals[3].textContent = data.expired.toLocaleString();
-    } catch (e) {
-      toast(e.message);
-    }
-  }
-
-  function renderProfile() {
-    if (!state.user) return;
-    const av = $('.profile-avatar');
-    if (av) {
-      av.textContent = initials(state.user.name);
-      av.style.background = state.user.avatar_color || '#0D5C45';
-    }
-    const h2 = $('.profile-header h2');
-    if (h2) h2.textContent = state.user.name;
-    const role = $('.profile-header .role');
-    if (role) {
-      role.textContent = (state.chama ? state.chama.member_role || 'Member' : 'Member') +
-        (state.chama ? ' · ' + state.chama.chama_name : '');
-    }
-    if (state.dashboard) {
-      const ps = $$('.ps-v');
-      if (ps[0]) ps[0].textContent = formatKES(state.dashboard.my_contributions || 0);
-      if (ps[1] && state.dashboard.my_loan) {
-        const l = state.dashboard.my_loan;
-        ps[1].textContent = formatKES(l.principal + l.interest - l.amount_repaid);
-      } else if (ps[1]) ps[1].textContent = formatKES(0);
-    }
-  }
-
-  // ---------- AUTH ----------
-  async function login(phone, pin) {
-    const data = await api('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ phone, pin }),
-    });
-    state.token = data.token;
-    state.user = data.user;
-    state.chama = data.chama;
-    localStorage.setItem('ch_token', data.token);
-    showView('app');
-    if (!data.chama) {
-      toast('No chama yet — create one or join with a code');
-      showPage('profile');
-    } else {
-      showPage('home');
-      toast('Welcome, ' + data.user.name.split(' ')[0] + '!');
-    }
-  }
-
-  function logout() {
-    state.token = null;
-    state.user = null;
-    state.chama = null;
-    state.dashboard = null;
-    localStorage.removeItem('ch_token');
-    showView('login');
-    toast('Logged out');
-  }
-
-  async function tryRestore() {
-    if (!state.token) return false;
-    try {
-      const data = await api('/api/me');
-      state.user = data.user;
-      state.chama = data.chama;
-      return true;
-    } catch {
-      localStorage.removeItem('ch_token');
-      state.token = null;
-      return false;
-    }
-  }
-
-  // ---------- PAYMENT ----------
   async function loadPaymentMethods() {
-    const box = document.getElementById('payment-methods-list');
-    if (!box) {
-      console.warn('payment-methods-list not in DOM');
-      return;
-    }
-    box.innerHTML = '<p class="muted">Loading…</p>';
+    const box = $('#payment-methods-list');
+    if (!box) return;
+    box.innerHTML = '<p class="muted">Loading payment methods…</p>';
     try {
       const data = await api('/api/payment-methods');
       state.paymentMethods = data.methods || [];
       if (!state.paymentMethods.length) {
-        box.innerHTML = `
-          <div class="ledger-disclaimer">
-            <strong>No payment methods yet.</strong><br/>
-            Ask your Chair or Treasurer to open the <b>Chama</b> tab and tap
-            <b>+ Add payment method</b> (M-Pesa number, till, bank, or cash).
-          </div>`;
+        box.innerHTML =
+          '<div class="notice-box"><strong>No payment methods yet</strong><br/>' +
+          'Ask Chair or Treasurer to open the <b>Chama</b> tab and tap <b>+ Add payment method</b>.</div>';
         state.selectedMethodId = null;
         return;
       }
@@ -500,42 +166,36 @@
         const def = state.paymentMethods.find(m => m.is_default) || state.paymentMethods[0];
         state.selectedMethodId = def.id;
       }
-      box.innerHTML = state.paymentMethods.map(m => {
-        const icon = (m.type || '').includes('MPESA') ? 'M' : m.type === 'BANK' ? 'B' : m.type === 'CASH' ? '₵' : 'P';
-        const active = m.id === state.selectedMethodId ? 'active' : '';
-        return `<button type="button" class="pay-method ${active}" data-method-id="${m.id}">
-          <div class="pm-icon">${icon}</div>
-          <div class="pm-body">
-            <div class="pm-label">${esc(m.label)}</div>
-            <div class="pm-details">${esc(m.details)}</div>
-            ${m.instructions ? '<div class="pm-hint">' + esc(m.instructions) + '</div>' : ''}
-          </div>
-        </button>`;
+      box.innerHTML = state.paymentMethods.map(function (m) {
+        const icon = (m.type || '').indexOf('MPESA') >= 0 ? 'M' : m.type === 'BANK' ? 'B' : m.type === 'CASH' ? '₵' : 'P';
+        const active = m.id === state.selectedMethodId ? ' active' : '';
+        return (
+          '<button type="button" class="pay-method' + active + '" data-method-id="' + m.id + '">' +
+          '<div class="pm-icon">' + icon + '</div>' +
+          '<div><div class="pm-label">' + esc(m.label) + '</div>' +
+          '<div class="pm-details">' + esc(m.details) + '</div>' +
+          (m.instructions ? '<div class="pm-hint">' + esc(m.instructions) + '</div>' : '') +
+          '</div></button>'
+        );
       }).join('');
     } catch (e) {
-      box.innerHTML = `<div class="ledger-disclaimer"><strong>Could not load methods.</strong><br/>${esc(e.message)}</div>`;
-      toast(e.message);
+      box.innerHTML = '<div class="notice-box danger"><strong>Could not load methods</strong><br/>' + esc(e.message) + '</div>';
     }
   }
 
   async function recordContribution() {
-    if (state.contribAmount < 1) {
-      toast('Enter amount');
+    if (!state.contribAmount || state.contribAmount < 1) {
+      toast('Enter an amount');
       return;
     }
-    if (!state.paymentMethods.length) {
-      toast('No payment method set. Ask your Treasurer to add one first.');
+    if (!state.paymentMethods.length || state.selectedMethodId == null) {
+      toast('Select a payment method first');
       return;
     }
-    if (state.selectedMethodId == null) {
-      toast('Select how you paid');
-      return;
-    }
-    showPage('payment');
-    const status = document.getElementById('pay-status');
-    if (status) status.textContent = 'Saving to the chama ledger…';
+    const btn = $('#btn-record-contrib');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     try {
-      const ref = document.getElementById('contrib-ref')?.value.trim() || '';
+      const ref = ($('#contrib-ref') && $('#contrib-ref').value.trim()) || '';
       const result = await api('/api/contributions/record', {
         method: 'POST',
         body: JSON.stringify({
@@ -544,349 +204,331 @@
           reference: ref,
         }),
       });
-      const amountEl = document.getElementById('success-amount');
-      if (amountEl) amountEl.textContent = formatKES(state.contribAmount);
-      const rec = document.getElementById('success-receipt');
-      if (rec) {
-        const c = result.contribution;
-        rec.textContent = c.status === 'SUCCESS'
-          ? (c.mpesa_ref ? 'Ref: ' + c.mpesa_ref : 'Confirmed on ledger')
-          : 'Status: Pending confirmation';
-      }
-      const details = document.getElementById('success-details');
-      if (details) {
-        const c = result.contribution;
-        details.innerHTML = `
-          <div class="sd-row"><span>Amount</span><span>${formatKES(c.amount)}</span></div>
-          <div class="sd-row"><span>Method</span><span>${esc(c.payment_method_label || c.method)}</span></div>
-          <div class="sd-row"><span>Reference</span><span>${esc(c.mpesa_ref || '—')}</span></div>
-          <div class="sd-row"><span>Status</span><span style="color:var(--emerald)">${c.status === 'SUCCESS' ? 'Confirmed' : 'Pending Treasurer'}</span></div>
-        `;
+      const c = result.contribution;
+      const amt = $('#success-amount');
+      if (amt) amt.textContent = formatKES(c.amount);
+      const msg = $('#success-msg');
+      if (msg) msg.textContent = result.message || 'Saved to ledger';
+      const det = $('#success-details');
+      if (det) {
+        det.innerHTML =
+          '<div class="row"><span>Amount</span><span>' + formatKES(c.amount) + '</span></div>' +
+          '<div class="row"><span>Method</span><span>' + esc(c.payment_method_label || c.method) + '</span></div>' +
+          '<div class="row"><span>Reference</span><span>' + esc(c.mpesa_ref || '—') + '</span></div>' +
+          '<div class="row"><span>Status</span><span>' + (c.status === 'SUCCESS' ? 'Confirmed' : 'Pending Treasurer') + '</span></div>';
       }
       showPage('success');
       toast(result.message || 'Recorded');
     } catch (e) {
       toast(e.message);
-      showPage('contribute');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'I have paid — record it'; }
     }
   }
 
-  function setOnboardStep(step) {
-    state.onboardStep = step;
-    $$('.onboard-slide').forEach(s => s.classList.toggle('active', +s.dataset.step === step));
-    $$('.onboard-dot').forEach(d => d.classList.toggle('active', +d.dataset.step === step));
-    const btn = $('#btn-next-onboard');
-    if (btn) btn.textContent = step === 3 ? 'Get Started' : 'Next';
+  async function loadMoney() {
+    try {
+      const data = await api('/api/contributions');
+      state.canConfirm = !!data.can_confirm;
+      const sum = $('#money-summary');
+      if (sum) {
+        sum.innerHTML =
+          '<div><strong>' + formatKES(data.total) + '</strong><span>All time</span></div>' +
+          '<div><strong>' + formatKES(data.mine) + '</strong><span>Mine</span></div>' +
+          '<div><strong>' + data.pending_count + '</strong><span>Pending</span></div>';
+      }
+      const list = $('#contrib-list');
+      if (list) {
+        list.innerHTML = data.contributions.length
+          ? data.contributions.map(txRow).join('')
+          : '<p class="muted">No contributions yet.</p>';
+      }
+    } catch (e) {
+      toast(e.message);
+    }
   }
 
-  // ---------- INIT ----------
-  async function init() {
-    applyTheme();
-    applyPerf();
-    applyMotion();
-
-    const restored = await tryRestore();
-    setTimeout(() => {
-      if (restored) {
-        showView('app');
-        showPage(state.chama ? 'home' : 'profile');
-      } else if (localStorage.getItem('ch-onboarded')) {
-        showView('login');
-      } else {
-        showView('onboarding');
-        setOnboardStep(0);
+  async function loadChama() {
+    try {
+      const data = await api('/api/members');
+      state.canManage = !!data.can_manage;
+      const label = $('#member-count-label');
+      if (label) label.textContent = 'Members ' + data.member_count + ' / ' + data.max_members;
+      const list = $('#member-list');
+      if (list) {
+        list.innerHTML = data.members.map(function (m) {
+          return (
+            '<div class="member-card">' +
+            '<div class="member-avatar" style="background:' + esc(m.avatar_color || '#0D5C45') + '">' + initials(m.name) + '</div>' +
+            '<div><h4>' + esc(m.name) + '</h4><p>' + esc(m.phone) + ' · ' + formatKES(m.total_contributed) + '</p></div>' +
+            '<span class="member-role">' + esc(m.role) + '</span></div>'
+          );
+        }).join('');
       }
-    }, 1200);
+      const invite = $('#invite-code-line');
+      if (invite) invite.textContent = 'Invite code: ' + (data.invite_code || '—');
+      const addMem = $('#btn-add-member');
+      if (addMem) addMem.style.display = data.can_manage ? 'block' : 'none';
 
-    // Onboarding
-    $('#btn-next-onboard')?.addEventListener('click', () => {
-      if (state.onboardStep < 3) setOnboardStep(state.onboardStep + 1);
-      else {
-        localStorage.setItem('ch-onboarded', '1');
-        showView('login');
+      const methods = await api('/api/payment-methods');
+      const olist = $('#official-methods-list');
+      if (olist) {
+        if (!methods.methods.length) {
+          olist.innerHTML = '<p class="muted small">None yet. Add M-Pesa, till, bank or cash.</p>';
+        } else {
+          olist.innerHTML = methods.methods.map(function (m) {
+            return (
+              '<div class="member-card" style="margin-bottom:8px">' +
+              '<div><h4>' + esc(m.label) + '</h4><p>' + esc(m.details) + '</p></div>' +
+              (data.can_manage
+                ? '<button type="button" class="btn-ghost" style="width:auto;padding:6px 10px;font-size:12px" data-del-method="' + m.id + '">Remove</button>'
+                : '') +
+              '</div>'
+            );
+          }).join('');
+        }
       }
-    });
-    $('#btn-skip-onboard')?.addEventListener('click', () => {
-      localStorage.setItem('ch-onboarded', '1');
-      showView('login');
-    });
+      const addPm = $('#btn-add-pay-method');
+      if (addPm) addPm.style.display = data.can_manage ? 'block' : 'none';
+    } catch (e) {
+      toast(e.message);
+    }
+  }
 
-    // Login
-    $('#login-form')?.addEventListener('submit', async e => {
+  async function loadMessages() {
+    try {
+      const data = await api('/api/messages');
+      const box = $('#chat-messages');
+      if (!box) return;
+      box.innerHTML = data.messages.map(function (m) {
+        const me = m.user_id === state.user.id;
+        return '<div class="msg ' + (me ? 'me' : 'them') + '">' +
+          (me ? '' : '<div class="msg-meta">' + esc(m.name) + '</div>') +
+          esc(m.body) + '</div>';
+      }).join('');
+      box.scrollTop = box.scrollHeight;
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+
+  function renderProfile() {
+    if (!state.user) return;
+    const av = $('#profile-avatar');
+    if (av) {
+      av.textContent = initials(state.user.name);
+      av.style.background = state.user.avatar_color || '#0D5C45';
+    }
+    const n = $('#profile-name');
+    if (n) n.textContent = state.user.name;
+    const r = $('#profile-role');
+    if (r) r.textContent = (state.chama ? state.chama.member_role + ' · ' + state.chama.chama_name : 'Member');
+    api('/api/dashboard').then(function (d) {
+      const pc = $('#profile-contrib');
+      if (pc) pc.textContent = formatKES(d.my_contributions);
+      const ps = $('#profile-sub');
+      if (ps && d.subscription) ps.textContent = d.subscription.status + ' until ' + (d.subscription.current_period_end || '—');
+    }).catch(function () {});
+  }
+
+  // ---------- AUTH ----------
+  async function login(phone, pin) {
+    const data = await api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ phone: phone, pin: pin }),
+    });
+    state.token = data.token;
+    state.user = data.user;
+    state.chama = data.chama;
+    localStorage.setItem('ch_token', data.token);
+    const g = $('#header-greet');
+    if (g) g.textContent = 'Hi, ' + data.user.name.split(' ')[0];
+    showView('app');
+    if (data.access && data.access.allowed === false) {
+      const m = $('#suspend-msg');
+      if (m) m.textContent = data.access.message || 'Suspended';
+      showPage('suspended');
+    } else {
+      showPage('home');
+      toast('Welcome, ' + data.user.name.split(' ')[0]);
+    }
+  }
+
+  function logout() {
+    state.token = null;
+    state.user = null;
+    state.chama = null;
+    localStorage.removeItem('ch_token');
+    showView('login');
+  }
+
+  async function tryRestore() {
+    if (!state.token) return false;
+    try {
+      const data = await api('/api/me');
+      state.user = data.user;
+      state.chama = data.chama;
+      const g = $('#header-greet');
+      if (g) g.textContent = 'Hi, ' + data.user.name.split(' ')[0];
+      return true;
+    } catch (e) {
+      localStorage.removeItem('ch_token');
+      state.token = null;
+      return false;
+    }
+  }
+
+  // ---------- EVENTS ----------
+  function bind() {
+    $('#login-form').addEventListener('submit', async function (e) {
       e.preventDefault();
-      const phone = $('#phone').value.trim();
-      const pin = $('#pin').value.trim();
-      if (!phone || pin.length < 4) {
-        toast('Enter phone and PIN');
-        return;
-      }
       try {
-        await login(phone, pin);
+        await login($('#phone').value.trim(), $('#pin').value);
       } catch (err) {
         toast(err.message);
       }
     });
 
-    // Create chama
-    $('#btn-create-chama')?.addEventListener('click', async () => {
-      const phone = $('#phone')?.value.trim() || prompt('Your phone (07XX…):');
-      const name = prompt('Your full name:');
-      const pin = prompt('Choose a 4-digit PIN:');
-      const chamaName = prompt('Name of your chama:');
-      if (!phone || !name || !pin || !chamaName) return;
-      try {
-        // register if needed
-        let token = state.token;
-        if (!token) {
-          try {
-            const reg = await api('/api/auth/register', {
-              method: 'POST',
-              body: JSON.stringify({ phone, pin, name }),
-            });
-            state.token = reg.token;
-            state.user = reg.user;
-            localStorage.setItem('ch_token', reg.token);
-          } catch (regErr) {
-            // maybe already registered — login
-            await login(phone, pin);
-          }
-        }
-        const created = await api('/api/chamas', {
-          method: 'POST',
-          body: JSON.stringify({ name: chamaName, contribution_amount: 2000 }),
-        });
-        state.chama = {
-          chama_id: created.chama.id,
-          chama_name: created.chama.name,
-          member_role: 'chair',
-          subscription_status: created.chama.subscription_status,
-          max_members: created.chama.max_members,
-          contribution_amount: created.chama.contribution_amount,
-          invite_code: created.invite_code,
-        };
-        showView('app');
-        showPage('home');
-        toast('Chama created! Invite code: ' + (created.invite_code || ''));
-      } catch (err) {
-        toast(err.message);
-      }
-    });
-
-    // Nav
-    $$('.nav-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.page) showPage(btn.dataset.page);
-      });
-    });
-    $$('.metric-card').forEach(card => {
-      card.addEventListener('click', () => {
-        if (card.dataset.page) showPage(card.dataset.page);
-      });
-    });
-    $$('.qa-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const a = btn.dataset.action;
-        if (a === 'contribute') showPage('contribute');
-        else if (a === 'loan') {
-          showPage('money');
-          $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'loans'));
-          $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-loans'));
-        } else if (a === 'meeting') showPage('meetings');
-        else if (a === 'chat') showPage('messages');
-      });
-    });
-    $$('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab.dataset.tab));
-        $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab.dataset.tab));
-      });
-    });
-
-    // Contribute
-    $('#btn-make-contrib')?.addEventListener('click', () => showPage('contribute'));
-    $$('.amount-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        $$('.amount-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.contribAmount = +btn.dataset.amount;
-        const inp = $('#contrib-amount');
-        if (inp) inp.value = state.contribAmount;
-        renderContributeSummary();
-      });
-    });
-    $('#contrib-amount')?.addEventListener('input', e => {
-      state.contribAmount = +e.target.value || 0;
-      renderContributeSummary();
-    });
-    $('#btn-record-contrib')?.addEventListener('click', () => {
-      if (state.contribAmount < 100) {
-        toast('Minimum is KES 100');
-        return;
-      }
-      recordContribution();
-    });
-
-    // Apply loan
-    $('#btn-apply-loan')?.addEventListener('click', async () => {
-      const amount = prompt('Loan amount (KES):', '10000');
-      if (!amount) return;
-      try {
-        const r = await api('/api/loans/apply', {
-          method: 'POST',
-          body: JSON.stringify({ amount: parseInt(amount, 10) }),
-        });
-        toast(r.message || 'Loan approved');
-        loadMoney();
-      } catch (e) {
-        toast(e.message);
-      }
-    });
-
-    // Add member
-    $('#btn-invite')?.addEventListener('click', () => {
-      if (!state.canManage) {
-        toast('Only Chair, Treasurer or Secretary can add members');
-        return;
-      }
-      openModal('modal-add-member');
-      // refresh code
-      api('/api/members').then(d => {
-        const el = $('#invite-code-display');
-        if (el) el.textContent = d.invite_code || '—';
-      }).catch(() => {});
-    });
-
-    $('#btn-confirm-add')?.addEventListener('click', async () => {
-      const name = $('#add-name')?.value.trim();
-      const phone = $('#add-phone')?.value.trim();
-      const role = $('#add-role')?.value || 'member';
-      if (!name || !phone) {
-        toast('Name and phone are required');
-        return;
-      }
-      try {
-        const r = await api('/api/members/add', {
-          method: 'POST',
-          body: JSON.stringify({ name, phone, role }),
-        });
-        toast(r.message || 'Member added');
-        closeModals();
-        $('#add-name').value = '';
-        $('#add-phone').value = '';
-        loadMembers();
-        loadDashboard();
-      } catch (e) {
-        toast(e.message);
-      }
-    });
-
-    $('#btn-copy-code')?.addEventListener('click', () => {
-      const code = $('#invite-code-display')?.textContent;
-      if (code && code !== '—') {
-        navigator.clipboard?.writeText(code).then(() => toast('Code copied: ' + code)).catch(() => toast(code));
-      }
-    });
-
-    // Join chama
-    $('#btn-confirm-join')?.addEventListener('click', async () => {
-      const code = $('#join-code')?.value.trim();
-      if (!code) {
-        toast('Enter invite code');
-        return;
-      }
-      try {
-        const r = await api('/api/chamas/join', {
-          method: 'POST',
-          body: JSON.stringify({ invite_code: code }),
-        });
-        state.chama = r.chama;
-        closeModals();
-        showPage('home');
-        toast(r.message || 'Joined!');
-      } catch (e) {
-        toast(e.message);
-      }
-    });
-
-    // Remove member
-    document.addEventListener('click', async e => {
-      const rm = e.target.closest('[data-remove-member]');
-      if (rm) {
-        const id = rm.dataset.removeMember;
-        if (!confirm('Remove this member from the chama?')) return;
-        try {
-          await api('/api/members/remove', {
-            method: 'POST',
-            body: JSON.stringify({ user_id: parseInt(id, 10) }),
-          });
-          toast('Member removed');
-          loadMembers();
-        } catch (err) {
-          toast(err.message);
-        }
-      }
-    });
-
-    // Global
-    document.addEventListener('click', async e => {
-      if (e.target.closest('[data-close-modal]')) closeModals();
-      const pageBtn = e.target.closest('[data-page]');
-      if (pageBtn && pageBtn.dataset.page) {
-        e.preventDefault();
-        showPage(pageBtn.dataset.page);
-      }
-      const action = e.target.closest('[data-action]');
-      if (action) {
-        const a = action.dataset.action;
-        if (a === 'meeting') showPage('meetings');
-        if (a === 'subscription') showPage('subscription');
-        if (a === 'owner') showPage('owner');
-        if (a === 'performance') {
-          state.perfMode = !state.perfMode;
-          applyPerf();
-          toast(state.perfMode ? 'Performance Mode on' : 'Performance Mode off');
-        }
-        if (a === 'reduced-motion') {
-          state.reducedMotion = !state.reducedMotion;
-          applyMotion();
-          toast(state.reducedMotion ? 'Reduced Motion on' : 'Reduced Motion off');
-        }
-        if (a === 'theme-settings') {
-          state.theme = state.theme === 'dark' ? 'light' : 'dark';
-          applyTheme();
-          toast(state.theme === 'dark' ? 'Dark mode' : 'Light mode');
-        }
-      }
-      if (e.target.textContent === 'MARK ATTENDANCE') {
-        const id = $('.meeting-card.large')?.dataset.meetingId;
-        if (!id) return toast('No meeting');
-        try {
-          await api('/api/meetings/' + id + '/attendance', { method: 'POST' });
-          toast('Attendance marked');
-        } catch (err) {
-          toast(err.message);
-        }
-      }
-      if (e.target.textContent === 'RENEW FOR KES 500' || e.target.textContent === 'RENEW SUBSCRIPTION') {
-        try {
-          await api('/api/subscription/renew', { method: 'POST' });
-          toast('Subscription renewed');
-          showPage('subscription');
-          loadSubscription();
-        } catch (err) {
-          toast(err.message);
-        }
-      }
-    });
-
-    $('#btn-theme')?.addEventListener('click', () => {
+    $('#btn-theme').addEventListener('click', function () {
       state.theme = state.theme === 'dark' ? 'light' : 'dark';
       applyTheme();
     });
 
-    async function sendChat() {
+    $('#btn-logout').addEventListener('click', logout);
+    $('#btn-logout-2').addEventListener('click', logout);
+
+    // Navigation via data-go
+    document.addEventListener('click', function (e) {
+      const go = e.target.closest('[data-go]');
+      if (go) {
+        e.preventDefault();
+        showPage(go.getAttribute('data-go'));
+        return;
+      }
+
+      const methodBtn = e.target.closest('[data-method-id]');
+      if (methodBtn) {
+        state.selectedMethodId = parseInt(methodBtn.getAttribute('data-method-id'), 10);
+        loadPaymentMethods();
+        return;
+      }
+
+      const chip = e.target.closest('.amount-chip');
+      if (chip) {
+        $$('.amount-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        state.contribAmount = parseInt(chip.getAttribute('data-amount'), 10);
+        const inp = $('#contrib-amount');
+        if (inp) inp.value = state.contribAmount;
+        return;
+      }
+
+      if (e.target.closest('#btn-record-contrib')) {
+        e.preventDefault();
+        recordContribution();
+        return;
+      }
+      if (e.target.closest('#btn-go-contribute') || e.target.closest('#btn-money-contribute')) {
+        e.preventDefault();
+        showPage('contribute');
+        return;
+      }
+
+      const conf = e.target.closest('[data-confirm]');
+      if (conf) {
+        api('/api/contributions/confirm', {
+          method: 'POST',
+          body: JSON.stringify({ contribution_id: parseInt(conf.getAttribute('data-confirm'), 10) }),
+        }).then(function () {
+          toast('Confirmed');
+          loadMoney();
+          loadDashboard();
+        }).catch(function (err) { toast(err.message); });
+        return;
+      }
+      const rej = e.target.closest('[data-reject]');
+      if (rej) {
+        api('/api/contributions/reject', {
+          method: 'POST',
+          body: JSON.stringify({ contribution_id: parseInt(rej.getAttribute('data-reject'), 10) }),
+        }).then(function () {
+          toast('Rejected');
+          loadMoney();
+        }).catch(function (err) { toast(err.message); });
+        return;
+      }
+
+      if (e.target.closest('[data-close]')) {
+        $('#modal-member').classList.add('hidden');
+      }
+
+      const delm = e.target.closest('[data-del-method]');
+      if (delm) {
+        if (!confirm('Remove this payment method?')) return;
+        api('/api/payment-methods/' + delm.getAttribute('data-del-method'), { method: 'DELETE' })
+          .then(function () { toast('Removed'); loadChama(); })
+          .catch(function (err) { toast(err.message); });
+      }
+    });
+
+    $('#contrib-amount').addEventListener('input', function (e) {
+      state.contribAmount = parseInt(e.target.value, 10) || 0;
+    });
+
+    $('#btn-add-member').addEventListener('click', function () {
+      if (!state.canManage) {
+        toast('Only Chair, Treasurer or Secretary can add members');
+        return;
+      }
+      $('#modal-member').classList.remove('hidden');
+    });
+
+    $('#btn-confirm-add').addEventListener('click', async function () {
+      try {
+        const r = await api('/api/members/add', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: $('#add-name').value.trim(),
+            phone: $('#add-phone').value.trim(),
+            role: $('#add-role').value,
+          }),
+        });
+        toast(r.message || 'Added');
+        $('#modal-member').classList.add('hidden');
+        $('#add-name').value = '';
+        $('#add-phone').value = '';
+        loadChama();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+
+    $('#btn-add-pay-method').addEventListener('click', async function () {
+      if (!state.canManage) {
+        toast('Only officials can add payment methods');
+        return;
+      }
+      const label = prompt('Label (e.g. M-Pesa to Jane)');
+      if (!label) return;
+      const details = prompt('Details (phone / till / account number)');
+      if (!details) return;
+      const type = prompt('Type: MPESA_PHONE, MPESA_TILL, BANK, CASH', 'MPESA_PHONE') || 'OTHER';
+      const instructions = prompt('Instructions for members (optional)', '') || '';
+      try {
+        await api('/api/payment-methods', {
+          method: 'POST',
+          body: JSON.stringify({ label: label, details: details, type: type, instructions: instructions, is_default: true }),
+        });
+        toast('Payment method added');
+        loadChama();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+
+    $('#btn-send').addEventListener('click', async function () {
       const input = $('#chat-input');
-      const text = input?.value.trim();
+      const text = input.value.trim();
       if (!text) return;
       try {
         await api('/api/messages', { method: 'POST', body: JSON.stringify({ body: text }) });
@@ -895,39 +537,21 @@
       } catch (e) {
         toast(e.message);
       }
-    }
-    $('#btn-send')?.addEventListener('click', sendChat);
-    $('#chat-input')?.addEventListener('keydown', e => {
-      if (e.key === 'Enter') sendChat();
     });
+  }
 
-    $('#btn-exit-owner')?.addEventListener('click', () => showPage('profile'));
-    $('#btn-owner-mode')?.addEventListener('click', () => showPage('owner'));
-    $('#btn-sim-expire')?.addEventListener('click', async () => {
-      try {
-        await api('/api/subscription/expire', { method: 'POST' });
-        showPage('expired');
-      } catch (e) {
-        toast(e.message);
+  async function init() {
+    applyTheme();
+    bind();
+    const ok = await tryRestore();
+    setTimeout(function () {
+      if (ok) {
+        showView('app');
+        showPage(state.chama ? 'home' : 'profile');
+      } else {
+        showView('login');
       }
-    });
-    $('#btn-restore-sub')?.addEventListener('click', async () => {
-      try {
-        await api('/api/subscription/renew', { method: 'POST' });
-        showPage('subscription');
-        toast('Subscription restored');
-      } catch (e) {
-        toast(e.message);
-      }
-    });
-    $('#btn-logout')?.addEventListener('click', logout);
-    $('#btn-notifications')?.addEventListener('click', () => toast('You\'re up to date'));
-    $$('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        $$('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
-    });
+    }, 800);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
