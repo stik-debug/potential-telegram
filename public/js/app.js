@@ -178,20 +178,40 @@
 
       const manage = $('#manage-actions');
       const noManage = $('#no-manage');
-      if (manage) manage.style.display = data.can_manage ? 'block' : 'none';
+      if (manage) manage.style.display = 'block'; // always show (methods visible to all; invite gated below)
       if (noManage) noManage.style.display = data.can_manage ? 'none' : 'block';
 
       const codeEl = $('#invite-code-display');
       if (codeEl) codeEl.textContent = data.invite_code || '—';
       const olist = document.getElementById('official-methods-list');
+      const payManage = document.getElementById('pay-methods-manage');
+      const addBtn = document.getElementById('btn-add-pay-method');
+      if (payManage) payManage.style.display = 'block';
+      if (addBtn) addBtn.style.display = data.can_manage ? 'block' : 'none';
       if (olist) {
         api('/api/payment-methods').then(d => {
-          olist.innerHTML = (d.methods || []).map(m =>
-            '<div class="member-card" style="padding:10px"><div class="member-info"><h4>' + esc(m.label) + '</h4><p>' + esc(m.details) + '</p></div>' +
-            (data.can_manage ? '<button class="btn-icon-sm danger" data-del-method="' + m.id + '">Remove</button>' : '') + '</div>'
-          ).join('') || '<p class="muted">None yet</p>';
-        }).catch(() => {});
+          const methods = d.methods || [];
+          if (!methods.length) {
+            olist.innerHTML = '<p class="muted">' + (data.can_manage
+              ? 'No methods yet — tap + Add payment method'
+              : 'No payment methods published yet') + '</p>';
+            return;
+          }
+          olist.innerHTML = methods.map(m =>
+            '<div class="member-card" style="padding:10px"><div class="member-info"><h4>' + esc(m.label) +
+            '</h4><p>' + esc(m.details) + '</p>' +
+            (m.instructions ? '<p class="muted" style="font-size:11px">' + esc(m.instructions) + '</p>' : '') +
+            '</div>' +
+            (data.can_manage ? '<button type="button" class="btn-icon-sm danger" data-del-method="' + m.id + '">Remove</button>' : '') +
+            '</div>'
+          ).join('');
+        }).catch(err => {
+          if (olist) olist.innerHTML = '<p class="muted">Could not load methods</p>';
+        });
       }
+      // Invite only for managers; payment methods stay visible for everyone
+      const inviteBtn = document.getElementById('btn-invite');
+      if (inviteBtn) inviteBtn.style.display = data.can_manage ? 'block' : 'none';
       const hint = $('#invite-hint');
       if (hint) hint.textContent = 'Invite code: ' + (data.invite_code || '—');
     } catch (e) {
@@ -457,22 +477,33 @@
 
   // ---------- PAYMENT ----------
   async function loadPaymentMethods() {
+    const box = document.getElementById('payment-methods-list');
+    if (!box) {
+      console.warn('payment-methods-list not in DOM');
+      return;
+    }
+    box.innerHTML = '<p class="muted">Loading…</p>';
     try {
       const data = await api('/api/payment-methods');
       state.paymentMethods = data.methods || [];
-      const box = document.getElementById('payment-methods-list');
-      if (!box) return;
       if (!state.paymentMethods.length) {
-        box.innerHTML = '<p class="muted" style="padding:8px 0">No payment methods yet. Ask your Treasurer to add how members should pay (M-Pesa number, till, bank…).</p>';
+        box.innerHTML = `
+          <div class="ledger-disclaimer">
+            <strong>No payment methods yet.</strong><br/>
+            Ask your Chair or Treasurer to open the <b>Chama</b> tab and tap
+            <b>+ Add payment method</b> (M-Pesa number, till, bank, or cash).
+          </div>`;
+        state.selectedMethodId = null;
         return;
       }
-      if (state.selectedMethodId == null) {
+      if (state.selectedMethodId == null || !state.paymentMethods.some(m => m.id === state.selectedMethodId)) {
         const def = state.paymentMethods.find(m => m.is_default) || state.paymentMethods[0];
         state.selectedMethodId = def.id;
       }
       box.innerHTML = state.paymentMethods.map(m => {
-        const icon = m.type.includes('MPESA') ? 'M' : m.type === 'BANK' ? 'B' : m.type === 'CASH' ? '₵' : 'P';
-        return `<button type="button" class="pay-method ${m.id === state.selectedMethodId ? 'active' : ''}" data-method-id="${m.id}">
+        const icon = (m.type || '').includes('MPESA') ? 'M' : m.type === 'BANK' ? 'B' : m.type === 'CASH' ? '₵' : 'P';
+        const active = m.id === state.selectedMethodId ? 'active' : '';
+        return `<button type="button" class="pay-method ${active}" data-method-id="${m.id}">
           <div class="pm-icon">${icon}</div>
           <div class="pm-body">
             <div class="pm-label">${esc(m.label)}</div>
@@ -482,6 +513,7 @@
         </button>`;
       }).join('');
     } catch (e) {
+      box.innerHTML = `<div class="ledger-disclaimer"><strong>Could not load methods.</strong><br/>${esc(e.message)}</div>`;
       toast(e.message);
     }
   }

@@ -260,18 +260,21 @@
           <div class="member-list" id="member-list">
             <!-- filled by JS -->
           </div>
+
           <div class="manage-actions" id="manage-actions">
             <button class="btn-primary btn-block" id="btn-invite">+ Add Member</button>
-
-          <div class="manage-actions" id="pay-methods-manage" style="margin-top:16px">
-            <h3 class="section-title" style="margin-bottom:8px">How members pay</h3>
-            <p class="muted" style="font-size:12px;margin-bottom:8px">Add M-Pesa numbers, till, bank or cash. Members pay outside the app, then record it here.</p>
-            <div id="official-methods-list"></div>
-            <button class="btn-primary btn-block" id="btn-add-pay-method" style="margin-top:10px">+ Add payment method</button>
-          </div>
-
             <p class="invite-hint muted" id="invite-hint"></p>
+
+            <div id="pay-methods-manage" style="margin-top:20px">
+              <h3 class="section-title" style="margin-bottom:8px">How members pay</h3>
+              <p class="muted" style="font-size:12px;margin-bottom:8px">
+                Add M-Pesa numbers, till, bank or cash. Members pay <strong>outside</strong> the app, then record it here.
+              </p>
+              <div id="official-methods-list"></div>
+              <button class="btn-primary btn-block" type="button" id="btn-add-pay-method" style="margin-top:10px">+ Add payment method</button>
+            </div>
           </div>
+
           <div class="no-manage muted" id="no-manage" style="display:none;text-align:center;padding:12px">
             Only Chair, Treasurer or Secretary can add members
           </div>
@@ -484,39 +487,48 @@
           </div>
         </div>
 
-        <!-- CONTRIBUTE FLOW (modal-like) -->
+                <!-- CONTRIBUTE FLOW -->
         <div id="page-contribute" class="page">
+          <div class="contrib-flow">
+            <button type="button" class="btn-text" data-page="money" style="margin-bottom:8px">← Back</button>
+            <h2>Record contribution</h2>
+            <p class="muted">Pay outside the app, then log it here for the group.</p>
+
             <div class="ledger-disclaimer">
-              <strong>Ledger only.</strong> ChamaHub does not collect or hold your money.
-              Pay using one of the methods below (M-Pesa, bank, cash…), then record it here so the group can track it.
+              <strong>Ledger only — ChamaHub never holds your money.</strong><br/>
+              1) Pay using a method below (M-Pesa, bank, cash…)<br/>
+              2) Come back and tap “I have paid” so the Treasurer can confirm.
             </div>
-            <div class="section-label">Pay using</div>
-            <div id="payment-methods-list" class="pay-methods"></div>
+
+            <div class="section-label">1. How did you pay?</div>
+            <div id="payment-methods-list" class="pay-methods">
+              <p class="muted">Loading payment methods…</p>
+            </div>
+
+            <div class="section-label">2. Amount (KES)</div>
+            <div class="amount-presets">
+              <button type="button" class="amount-btn" data-amount="1000">1,000</button>
+              <button type="button" class="amount-btn active" data-amount="2000">2,000</button>
+              <button type="button" class="amount-btn" data-amount="5000">5,000</button>
+            </div>
+            <div class="input-group">
+              <label for="contrib-amount">Custom amount</label>
+              <input type="number" id="contrib-amount" value="2000" min="1" step="100" inputmode="numeric" />
+            </div>
+
             <div class="input-group">
               <label for="contrib-ref">Payment reference (optional)</label>
               <input type="text" id="contrib-ref" placeholder="M-Pesa code, bank ref, receipt #" />
             </div>
 
-          <div class="contrib-flow">
-            <h2>Make Contribution</h2>
-            <p class="muted">Select amount and pay via M-Pesa</p>
-            <div class="amount-presets">
-              <button class="amount-btn" data-amount="1000">1,000</button>
-              <button class="amount-btn active" data-amount="2000">2,000</button>
-              <button class="amount-btn" data-amount="5000">5,000</button>
-            </div>
-            <div class="input-group">
-              <label>Custom amount (KES)</label>
-              <input type="number" id="contrib-amount" value="2000" min="100" step="100" />
-            </div>
-            <button class="btn-primary btn-block btn-lg" id="btn-record-contrib">
+            <button type="button" class="btn-primary btn-block btn-lg" id="btn-record-contrib">
               I HAVE PAID — RECORD IT
             </button>
-            <button class="btn-text mt-12" data-page="money">Cancel</button>
+            <button type="button" class="btn-text btn-block mt-12" data-page="money">Cancel</button>
           </div>
         </div>
 
-        <!-- PAYMENT ANIMATION -->
+<!-- PAYMENT ANIMATION -->
         <div id="page-payment" class="page">
           <div class="payment-anim">
             <div class="pay-nodes">

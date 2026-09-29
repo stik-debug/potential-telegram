@@ -264,7 +264,21 @@ function migrate(data) {
   if (!data.loan_repayments) data.loan_repayments = [];
   if (!data.fines) data.fines = [];
   if (!data.announcements) data.announcements = [];
-  data.chamas.forEach(c => { if (!c.payment_methods) c.payment_methods = []; });
+  data.chamas.forEach(c => {
+    if (!c.payment_methods) c.payment_methods = [];
+    // If chama has no methods, seed a placeholder so UI is never empty for first-time deploy
+    if (c.payment_methods.length === 0) {
+      data.payment_method_seq = (data.payment_method_seq || 0) + 1;
+      c.payment_methods.push({
+        id: data.payment_method_seq,
+        type: 'MPESA_PHONE',
+        label: 'M-Pesa (set by Treasurer)',
+        details: 'Ask Treasurer for the number',
+        instructions: 'Chair/Treasurer: replace this with your real M-Pesa number, till or bank on the Chama tab.',
+        is_default: true,
+      });
+    }
+  });
   if (data.payment_method_seq == null) data.payment_method_seq = 0;
   if (!data.seq) data.seq = {};
 
