@@ -1,8 +1,22 @@
 {
   "name": "chamahub-kenya",
-  "version": "4.0.0",
-  "description": "ChamaHub Kenya — ledger-style chama app",
+  "version": "1.0.0",
+  "description": "ChamaHub Kenya — multi-tenant chama management SaaS (ledger model)",
   "main": "server/index.js",
-  "scripts": { "start": "node server/index.js" },
-  "engines": { "node": ">=16" }
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "NODE_ENV=development SEED_DEMO=1 node server/index.js",
+    "seed": "SEED_DEMO=1 node scripts/seed.js",
+    "db:reset": "rm -f data/chamahub.sqlite && npm run seed"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "license": "UNLICENSED"
 }

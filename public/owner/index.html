@@ -110,7 +110,7 @@
       users.innerHTML='<table><tr><th>Name</th><th>Phone</th><th>Role</th><th>Chama</th></tr>'+
         d.users.map(u=>`<tr><td>${u.name}</td><td>${u.phone}</td><td>${u.platform_role}</td><td>${u.chama_name||'—'}</td></tr>`).join('')+'</table>';
     }
-    if(token){ api('/api/me').then(d=>{ if(d.user.platform_role==='SUPER_ADMIN'){ login.classList.add('hidden'); app.classList.remove('hidden'); loadDash(); } else localStorage.removeItem('ch_owner_token'); }).catch(()=>{}); }
+    if(token){ api('/api/auth/me').then(d=>{ if(d.user.platform_role==='SUPER_ADMIN'){ login.classList.add('hidden'); app.classList.remove('hidden'); loadDash(); } else localStorage.removeItem('ch_owner_token'); }).catch(()=>{}); }
   </script>
 </body>
 </html>

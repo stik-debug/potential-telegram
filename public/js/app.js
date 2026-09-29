@@ -365,7 +365,7 @@
   async function tryRestore() {
     if (!state.token) return false;
     try {
-      const data = await api('/api/me');
+      const data = await api('/api/auth/me');
       state.user = data.user;
       state.chama = data.chama;
       const g = $('#header-greet');
