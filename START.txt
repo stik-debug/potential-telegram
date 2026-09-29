@@ -1,0 +1,37 @@
+═══════════════════════════════════════════════════════
+ ChamaHub Kenya v3 — Production Architecture
+═══════════════════════════════════════════════════════
+
+  node server/index.js
+  App:   http://localhost:3000
+  Owner: http://localhost:3000/owner
+
+SUPER_ADMIN:  0700000001  /  Owner@2026!
+Chair (dev):  0723456789  /  1234
+Treasurer:    0712345678  /  1234
+
+OWNER CONTROL CENTER (/owner)
+  Dashboard stats (live DB)
+  All Chamas — search/filter
+  Open Chama → Suspend / Reactivate / Extend
+  Payments + Manual payment
+  Users
+  Audit logs
+  Settings + Maintenance mode
+
+SUBSCRIPTION LIFECYCLE (backend)
+  TRIAL → ACTIVE → PAST_DUE → GRACE_PERIOD → SUSPENDED
+  Hourly expiry job · Grace period configurable
+  Pay subscription restores access after server verification
+  Data NEVER deleted on suspend/expire
+
+SECURITY
+  SUPER_ADMIN routes require platform_role check server-side
+  Suspended chamas blocked on API (not just UI)
+  Messages/members scoped by chama_id
+  Audit log on critical actions
+  Member limit from plan config (default 15)
+
+Production: set NODE_ENV=production JWT_SECRET=... OWNER_PIN=...
+  (skips demo seed; create super admin via env)
+═══════════════════════════════════════════════════════

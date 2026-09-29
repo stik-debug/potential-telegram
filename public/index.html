@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0A3D2E" />
+  <meta name="description" content="ChamaHub Kenya — Save Together. Grow Together." />
+  <title>ChamaHub Kenya</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ========== SPLASH ========== -->
+    <section id="view-splash" class="view active">
+      <div class="splash-bg">
+        <div class="splash-orb splash-orb-1"></div>
+        <div class="splash-orb splash-orb-2"></div>
+      </div>
+      <div class="splash-content">
+        <div class="logo-mark">
+          <div class="logo-ring"></div>
+          <span class="logo-text">CH</span>
+        </div>
+        <h1 class="splash-title">ChamaHub Kenya</h1>
+        <p class="splash-tagline">Save Together. Grow Together.</p>
+      </div>
+    </section>
+
+    <!-- ========== ONBOARDING ========== -->
+    <section id="view-onboarding" class="view">
+      <div class="onboard-progress">
+        <div class="onboard-dot active" data-step="0"></div>
+        <div class="onboard-dot" data-step="1"></div>
+        <div class="onboard-dot" data-step="2"></div>
+        <div class="onboard-dot" data-step="3"></div>
+      </div>
+      <div class="onboard-slides">
+        <div class="onboard-slide active" data-step="0">
+          <div class="onboard-visual">
+            <div class="node-cluster">
+              <div class="node n1"></div>
+              <div class="node n2"></div>
+              <div class="node n3"></div>
+              <div class="node n4"></div>
+              <div class="node n-center"></div>
+            </div>
+          </div>
+          <h2>Bring Your Chama Together</h2>
+          <p>Connect every member in one beautiful place. Transparency for everyone.</p>
+        </div>
+        <div class="onboard-slide" data-step="1">
+          <div class="onboard-visual">
+            <div class="savings-jar">
+              <div class="jar-body"></div>
+              <div class="jar-coin c1"></div>
+              <div class="jar-coin c2"></div>
+              <div class="jar-coin c3"></div>
+            </div>
+          </div>
+          <h2>Track Every Contribution</h2>
+          <p>See balances, contributions, and growth in real time. No more spreadsheets.</p>
+        </div>
+        <div class="onboard-slide" data-step="2">
+          <div class="onboard-visual">
+            <div class="pay-flow">
+              <div class="pay-node phone">📱</div>
+              <div class="pay-line"></div>
+              <div class="pay-node mpesa">M</div>
+              <div class="pay-line"></div>
+              <div class="pay-node chama">₵</div>
+            </div>
+          </div>
+          <h2>Pay Easily with M-Pesa</h2>
+          <p>Contribute in seconds. Verified payments. Instant confirmation.</p>
+        </div>
+        <div class="onboard-slide" data-step="3">
+          <div class="onboard-visual">
+            <div class="growth-chart">
+              <div class="bar b1"></div>
+              <div class="bar b2"></div>
+              <div class="bar b3"></div>
+              <div class="bar b4"></div>
+              <div class="bar b5"></div>
+            </div>
+          </div>
+          <h2>Grow Together</h2>
+          <p>Loans, meetings, announcements — everything your chama needs to thrive.</p>
+        </div>
+      </div>
+      <div class="onboard-actions">
+        <button class="btn-text" id="btn-skip-onboard">Skip</button>
+        <button class="btn-primary" id="btn-next-onboard">Next</button>
+      </div>
+    </section>
+
+    <!-- ========== LOGIN ========== -->
+    <section id="view-login" class="view">
+      <div class="login-hero">
+        <div class="login-orb">
+          <div class="orb-ring r1"></div>
+          <div class="orb-ring r2"></div>
+          <div class="orb-core">₵</div>
+          <span class="float-tag t1">Coins</span>
+          <span class="float-tag t2">M-Pesa</span>
+          <span class="float-tag t3">Community</span>
+          <span class="float-tag t4">Growth</span>
+        </div>
+      </div>
+      <div class="glass-card login-card">
+        <h1>Manage Your Chama.<br/>Grow Together.</h1>
+        <p class="subtitle">Everything your chama needs in one beautiful app.</p>
+        <form id="login-form">
+          <div class="input-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" placeholder="07XX XXX XXX" inputmode="tel" autocomplete="tel" />
+          </div>
+          <div class="input-group">
+            <label for="pin">PIN</label>
+            <input type="password" id="pin" placeholder="••••" maxlength="6" inputmode="numeric" />
+          </div>
+          <button type="submit" class="btn-primary btn-block">LOGIN</button>
+        </form>
+        <button class="btn-outline btn-block" id="btn-create-chama">CREATE A CHAMA</button>
+        <p class="login-demo">Chair: 0723456789 · Member: 0712345678 · PIN 1234</p>
+      </div>
+    </section>
+
+    <!-- ========== MAIN APP SHELL ========== -->
+    <section id="view-app" class="view">
+      <!-- Top bar (mobile) -->
+      <header class="app-header">
+        <div class="header-left">
+          <button class="icon-btn" id="btn-theme" aria-label="Toggle theme">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          </button>
+        </div>
+        <div class="header-center">
+          <span class="header-title" id="header-title">Home</span>
+        </div>
+        <div class="header-right">
+          <button class="icon-btn" id="btn-notifications" aria-label="Notifications">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="badge">3</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content area -->
+      <main class="app-content" id="app-content">
+
+        <!-- HOME / DASHBOARD -->
+        <div id="page-home" class="page active">
+          <div class="welcome-row">
+            <div>
+              <p class="welcome-text">Welcome back 👋</p>
+              <h2 class="chama-name">Umoja Savings</h2>
+            </div>
+            <div class="avatar-stack">
+              <div class="avatar a1">JM</div>
+              <div class="avatar a2">AK</div>
+              <div class="avatar a3">+10</div>
+            </div>
+          </div>
+
+          <!-- Large balance card -->
+          <div class="balance-card">
+            <p class="balance-label">TOTAL BALANCE</p>
+            <h1 class="balance-amount" id="balance-amount">KES 245,800</h1>
+            <div class="balance-stats">
+              <div class="b-stat">
+                <span class="b-label">Monthly</span>
+                <span class="b-value">KES 42,000</span>
+              </div>
+              <div class="b-stat">
+                <span class="b-label">Loans</span>
+                <span class="b-value">KES 75,000</span>
+              </div>
+              <div class="b-stat">
+                <span class="b-label">Next</span>
+                <span class="b-value">Fri 2,000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metric cards -->
+          <div class="metric-grid">
+            <div class="metric-card" data-page="money">
+              <div class="metric-icon savings">₵</div>
+              <div class="metric-info">
+                <span class="metric-label">TOTAL SAVINGS</span>
+                <span class="metric-value">KES 245,800</span>
+              </div>
+            </div>
+            <div class="metric-card" data-page="money">
+              <div class="metric-icon contrib">↑</div>
+              <div class="metric-info">
+                <span class="metric-label">CONTRIBUTIONS</span>
+                <span class="metric-value">KES 42,000</span>
+              </div>
+            </div>
+            <div class="metric-card" data-page="loans">
+              <div class="metric-icon loans">↓</div>
+              <div class="metric-info">
+                <span class="metric-label">LOANS</span>
+                <span class="metric-value">KES 75,000</span>
+              </div>
+            </div>
+            <div class="metric-card" data-page="chama">
+              <div class="metric-icon members">👥</div>
+              <div class="metric-info">
+                <span class="metric-label">MEMBERS</span>
+                <span class="metric-value">12 / 15</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="section-title">Quick Actions</div>
+          <div class="quick-actions">
+            <button class="qa-btn" data-action="contribute">
+              <span class="qa-icon">💰</span>
+              <span>Contribute</span>
+            </button>
+            <button class="qa-btn" data-action="loan">
+              <span class="qa-icon">📋</span>
+              <span>Apply Loan</span>
+            </button>
+            <button class="qa-btn" data-action="meeting">
+              <span class="qa-icon">📅</span>
+              <span>Meetings</span>
+            </button>
+            <button class="qa-btn" data-action="chat">
+              <span class="qa-icon">💬</span>
+              <span>Chat</span>
+            </button>
+          </div>
+
+          <!-- Upcoming -->
+          <div class="section-title">Upcoming</div>
+          <div class="meeting-card elevated">
+            <div class="meeting-date">
+              <span class="day">Fri</span>
+              <span class="time">7:00 PM</span>
+            </div>
+            <div class="meeting-info">
+              <h4>Chama Meeting</h4>
+              <p>Monthly contribution review</p>
+            </div>
+            <button class="btn-sm" data-action="meeting">View</button>
+          </div>
+        </div>
+
+        <!-- CHAMA / MEMBERS -->
+        <div id="page-chama" class="page">
+          <div class="section-title">Members <span class="count">12 / 15</span></div>
+          <div class="member-list" id="member-list">
+            <!-- filled by JS -->
+          </div>
+          <div class="manage-actions" id="manage-actions">
+            <button class="btn-primary btn-block" id="btn-invite">+ Add Member</button>
+            <p class="invite-hint muted" id="invite-hint"></p>
+          </div>
+          <div class="no-manage muted" id="no-manage" style="display:none;text-align:center;padding:12px">
+            Only Chair, Treasurer or Secretary can add members
+          </div>
+        </div>
+
+        <!-- MONEY -->
+        <div id="page-money" class="page">
+          <div class="section-title">Money</div>
+          <div class="money-tabs">
+            <button class="tab active" data-tab="contrib">Contributions</button>
+            <button class="tab" data-tab="loans">Loans</button>
+            <button class="tab" data-tab="history">History</button>
+          </div>
+
+          <div id="tab-contrib" class="tab-panel active">
+            <div class="contrib-hero">
+              <p>This month</p>
+              <h2>KES 42,000</h2>
+              <p class="sub">of KES 48,000 target</p>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 87.5%"></div>
+              </div>
+            </div>
+            <button class="btn-primary btn-block btn-lg" id="btn-make-contrib">
+              MAKE CONTRIBUTION
+            </button>
+            <div class="section-title mt-24">Recent</div>
+            <div class="tx-list" id="contrib-list"></div>
+          </div>
+
+          <div id="tab-loans" class="tab-panel">
+            <div class="loan-card">
+              <p class="loan-label">YOUR LOAN</p>
+              <h2 class="loan-amount">KES 50,000</h2>
+              <p class="loan-sub">Outstanding</p>
+              <div class="progress-ring-wrap">
+                <svg class="progress-ring" viewBox="0 0 100 100">
+                  <circle class="ring-bg" cx="50" cy="50" r="42"/>
+                  <circle class="ring-fill" cx="50" cy="50" r="42" stroke-dasharray="264" stroke-dashoffset="84"/>
+                </svg>
+                <div class="ring-center">
+                  <span class="ring-pct">68%</span>
+                  <span class="ring-label">Repaid</span>
+                </div>
+              </div>
+              <div class="loan-details">
+                <div class="ld-row"><span>Principal</span><span>KES 50,000</span></div>
+                <div class="ld-row"><span>Interest</span><span>KES 5,000</span></div>
+                <div class="ld-row"><span>Amount repaid</span><span>KES 34,000</span></div>
+                <div class="ld-row"><span>Remaining</span><span>KES 21,000</span></div>
+                <div class="ld-row"><span>Next payment</span><span>15 Oct 2026</span></div>
+              </div>
+              <button class="btn-outline btn-block mt-16" id="btn-apply-loan">APPLY FOR LOAN</button>
+            </div>
+          </div>
+
+          <div id="tab-history" class="tab-panel">
+            <div class="tx-list" id="history-list"></div>
+          </div>
+        </div>
+
+        <!-- MESSAGES -->
+        <div id="page-messages" class="page">
+          <div class="chat-header">
+            <h3>Umoja Savings</h3>
+            <span class="online-count">8 online</span>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <!-- filled by JS -->
+          </div>
+          <div class="chat-input-bar">
+            <input type="text" id="chat-input" placeholder="Message your chama…" />
+            <button class="btn-send" id="btn-send">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div id="page-profile" class="page">
+          <div class="profile-header">
+            <div class="profile-avatar">JM</div>
+            <h2>Jane Mwangi</h2>
+            <p class="role">Treasurer · Umoja Savings</p>
+          </div>
+          <div class="profile-stats">
+            <div class="ps"><span class="ps-v">KES 38,500</span><span class="ps-l">Contributed</span></div>
+            <div class="ps"><span class="ps-v">KES 0</span><span class="ps-l">Loan</span></div>
+            <div class="ps"><span class="ps-v">100%</span><span class="ps-l">Attendance</span></div>
+          </div>
+
+          <div class="settings-list">
+            <button class="settings-item" data-action="subscription">
+              <span>Subscription</span>
+              <span class="status-pill active">ACTIVE</span>
+            </button>
+            <button class="settings-item" data-action="theme-settings">
+              <span>Appearance</span>
+              <span class="chevron">›</span>
+            </button>
+            <button class="settings-item" data-action="performance">
+              <span>Performance Mode</span>
+              <span class="toggle" id="perf-toggle"></span>
+            </button>
+            <button class="settings-item" data-action="reduced-motion">
+              <span>Reduced Motion</span>
+              <span class="toggle" id="motion-toggle"></span>
+            </button>
+            <button class="settings-item" data-action="owner" id="btn-owner-mode">
+              <span>Owner Dashboard</span>
+              <span class="chevron">›</span>
+            </button>
+            <button class="settings-item danger" id="btn-logout">
+              <span>Log out</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- OWNER DASHBOARD -->
+        <div id="page-owner" class="page">
+          <div class="owner-header">
+            <h2>ChamaHub Control Center</h2>
+            <p>Super Admin</p>
+          </div>
+          <div class="owner-metrics">
+            <div class="om-card">
+              <span class="om-label">ACTIVE CHAMAS</span>
+              <span class="om-value" data-live="chamas">2,450</span>
+            </div>
+            <div class="om-card">
+              <span class="om-label">ACTIVE USERS</span>
+              <span class="om-value" data-live="users">31,240</span>
+            </div>
+            <div class="om-card">
+              <span class="om-label">MONTHLY REVENUE</span>
+              <span class="om-value" data-live="revenue">KES 1.2M</span>
+            </div>
+            <div class="om-card">
+              <span class="om-label">EXPIRED</span>
+              <span class="om-value" data-live="expired">127</span>
+            </div>
+          </div>
+          <div class="section-title light">Revenue (30 days)</div>
+          <div class="chart-card">
+            <div class="chart-bars" id="revenue-chart">
+              <div class="cbar" style="--h:40%"><span>W1</span></div>
+              <div class="cbar" style="--h:65%"><span>W2</span></div>
+              <div class="cbar" style="--h:55%"><span>W3</span></div>
+              <div class="cbar" style="--h:80%"><span>W4</span></div>
+            </div>
+          </div>
+          <div class="filter-row">
+            <button class="filter-btn">7d</button>
+            <button class="filter-btn active">30d</button>
+            <button class="filter-btn">90d</button>
+            <button class="filter-btn">12m</button>
+          </div>
+          <button class="btn-outline btn-block mt-16" id="btn-exit-owner">Back to Member View</button>
+        </div>
+
+        <!-- SUBSCRIPTION -->
+        <div id="page-subscription" class="page">
+          <div class="sub-card">
+            <p class="sub-label">YOUR CHAMAHUB PLAN</p>
+            <h2 class="sub-plan">STANDARD</h2>
+            <p class="sub-members">15 MEMBERS</p>
+            <p class="sub-price">KES 500 / MONTH</p>
+            <div class="sub-status">
+              <span class="dot active"></span> ACTIVE
+            </div>
+            <p class="sub-next">Next payment: 12 October 2026</p>
+            <button class="btn-primary btn-block">RENEW SUBSCRIPTION</button>
+          </div>
+          <button class="btn-text mt-16" id="btn-sim-expire">Simulate expiration (demo)</button>
+        </div>
+
+        <!-- EXPIRATION -->
+        <div id="page-expired" class="page">
+          <div class="expired-visual">
+            <div class="vault-icon">🔒</div>
+          </div>
+          <h2>Your subscription has expired</h2>
+          <p>Your chama data is safe. Renew your subscription to restore full access.</p>
+          <button class="btn-primary btn-block btn-lg">RENEW FOR KES 500</button>
+          <button class="btn-text mt-12" id="btn-restore-sub">Restore (demo)</button>
+        </div>
+
+        <!-- MEETINGS -->
+        <div id="page-meetings" class="page">
+          <div class="section-title">Upcoming Meetings</div>
+          <div class="meeting-card elevated large">
+            <div class="meeting-cal">
+              <span class="cal-month">OCT</span>
+              <span class="cal-day">03</span>
+            </div>
+            <div class="meeting-info">
+              <h4>Chama Meeting</h4>
+              <p>Friday · 7:00 PM</p>
+              <p class="muted">Monthly contribution review & loan approvals</p>
+            </div>
+          </div>
+          <div class="meeting-actions">
+            <button class="btn-primary">VIEW MEETING</button>
+            <button class="btn-outline">MARK ATTENDANCE</button>
+          </div>
+          <div class="section-title mt-24">Past</div>
+          <div class="empty-state small">
+            <div class="empty-icon">📅</div>
+            <p>No past meetings shown</p>
+          </div>
+        </div>
+
+        <!-- CONTRIBUTE FLOW (modal-like) -->
+        <div id="page-contribute" class="page">
+          <div class="contrib-flow">
+            <h2>Make Contribution</h2>
+            <p class="muted">Select amount and pay via M-Pesa</p>
+            <div class="amount-presets">
+              <button class="amount-btn" data-amount="1000">1,000</button>
+              <button class="amount-btn active" data-amount="2000">2,000</button>
+              <button class="amount-btn" data-amount="5000">5,000</button>
+            </div>
+            <div class="input-group">
+              <label>Custom amount (KES)</label>
+              <input type="number" id="contrib-amount" value="2000" min="100" step="100" />
+            </div>
+            <button class="btn-primary btn-block btn-lg" id="btn-pay-mpesa">
+              PAY WITH M-PESA
+            </button>
+            <button class="btn-text mt-12" data-page="money">Cancel</button>
+          </div>
+        </div>
+
+        <!-- PAYMENT ANIMATION -->
+        <div id="page-payment" class="page">
+          <div class="payment-anim">
+            <div class="pay-nodes">
+              <div class="pn phone active">📱</div>
+              <div class="pn-line"></div>
+              <div class="pn mpesa">M</div>
+              <div class="pn-line"></div>
+              <div class="pn chama">₵</div>
+            </div>
+            <p class="pay-status" id="pay-status">Connecting to M-Pesa…</p>
+            <div class="pay-spinner"></div>
+          </div>
+        </div>
+
+        <!-- PAYMENT SUCCESS -->
+        <div id="page-success" class="page">
+          <div class="success-anim">
+            <div class="success-check">✓</div>
+            <h2>Contribution Received</h2>
+            <p class="success-amount" id="success-amount">KES 2,000</p>
+            <p class="success-receipt" id="success-receipt"></p>
+            <p class="muted">Your contribution has been recorded and added to the chama balance.</p>
+            <div class="success-details" id="success-details"></div>
+            <button class="btn-primary btn-block mt-24" data-page="home">Done</button>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- Floating glass bottom nav -->
+      <nav class="bottom-nav glass-nav" id="bottom-nav">
+        <button class="nav-item active" data-page="home">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" data-page="chama">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Chama</span>
+        </button>
+        <button class="nav-item" data-page="money">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Money</span>
+        </button>
+        <button class="nav-item" data-page="messages">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Messages</span>
+        </button>
+        <button class="nav-item" data-page="profile">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span>
+        </button>
+      </nav>
+    </section>
+
+  </div>
+
+  <!-- Toast -->
+  
+  <!-- ADD MEMBER MODAL -->
+  <div id="modal-add-member" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <h3>Add Member</h3>
+      <p class="muted modal-sub">Chair, Treasurer &amp; Secretary can add members</p>
+      <div class="input-group">
+        <label for="add-name">Full Name</label>
+        <input type="text" id="add-name" placeholder="e.g. John Kamau" />
+      </div>
+      <div class="input-group">
+        <label for="add-phone">Phone Number</label>
+        <input type="tel" id="add-phone" placeholder="07XX XXX XXX" inputmode="tel" />
+      </div>
+      <div class="input-group">
+        <label for="add-role">Role</label>
+        <select id="add-role">
+          <option value="member">Member</option>
+          <option value="secretary">Secretary</option>
+          <option value="treasurer">Treasurer</option>
+        </select>
+      </div>
+      <button class="btn-primary btn-block" id="btn-confirm-add">ADD MEMBER</button>
+      <button class="btn-text btn-block mt-12" data-close-modal>Cancel</button>
+      <div class="invite-code-box" id="invite-code-box">
+        <p class="muted">Or share invite code</p>
+        <div class="invite-code-row">
+          <code id="invite-code-display">—</code>
+          <button class="btn-sm" id="btn-copy-code">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOIN CHAMA MODAL -->
+  <div id="modal-join" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <h3>Join a Chama</h3>
+      <p class="muted modal-sub">Enter the invite code from your chairperson</p>
+      <div class="input-group">
+        <label for="join-code">Invite Code</label>
+        <input type="text" id="join-code" placeholder="e.g. UMOJA2026" style="text-transform:uppercase" />
+      </div>
+      <button class="btn-primary btn-block" id="btn-confirm-join">JOIN CHAMA</button>
+      <button class="btn-text btn-block mt-12" data-close-modal>Cancel</button>
+    </div>
+  </div>
+
+
+  <div id="toast" class="toast"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
